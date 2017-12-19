@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Welcome to Firebase Hosting</title>
+
+   <script
+      type="text/javascript"
+      src="https://app.sandbox.midtrans.com/snap/snap.js"
+      data-client-key="SB-Mid-client-rONwRSEX8yJxu3qn"
+   ></script>
+
+    <style media="screen">
+      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
+      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
+      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
+      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
+      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
+      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
+      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
+      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
+      @media (max-width: 600px) {
+        body, #message { margin-top: 0; background: white; box-shadow: none; }
+        body { border-top: 16px solid #ffa100; }
+      }
+      strong{
+          font-size: 20px;
+          line-height: 28px;
+      }
+      .item{
+          margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+      Hello World
+    <form action="localhost:7000/token" method="GET" onsubmit="onSubmit">
+        <div>
+            <strong>User Detail</strong>
+            <hr />
+            <div>
+                <label for="email">Email</label>
+                <input name="email" id="email" type="email" />
+            </div>
+            <div>
+                <label for="first_name">First Name</label>
+                <input name="first_name" id="first_name" type="text">
+            </div>
+            <div>
+                <label for="last_name">Last Name</label>
+                <input name="last_name" id="last_name" type="text">
+            </div>
+            <div>
+                <label for="phone">Phone</label>
+                <input name="phone" id="phone" type="text">
+            </div>
+        </div>
+
+        <div>
+            <strong>Item Detail</strong>
+            <hr />
+            <div style="display:flex;">
+                <div id="item_detail"   style="">
+                  <div id="item1" class="item">
+                    <div>
+                        <label for="">Item id:</label>
+                        <input type="text" name="id" />    
+                    </div>
+                    <div>
+                        <label for="">Nama item</label>
+                        <input type="text" name="name"/>
+                    </div>
+                    <div>
+                        <label for="">Quantity</label>
+                        <input type="number" min="0" onchange="calculateTotal()"/>
+                    </div>
+
+                    <div>
+                        <label for="">price per item</label>
+                        <input type="text" name="price"  onchange="calculateTotal()"/>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                    <button type="button" onclick="addItem()">Add Item</button>
+                </div>
+            </div>
+
+            <strong>Total</strong>
+            <span id="total">0</span>
+            
+            <div>
+                <button onclick="onSubmit(this, event)">Checkout Now</button>
+            </div>
+        </div>
+    </form>
+    
+  </body>
+
+  <script>
+      let itemLength = 1;
+      let itemDetail = [];// this have to be immutable
+
+      //order_id will be manually generated
+      function onSubmit(element, e){
+        e.preventDefault();
+        e.stopPropagation();
+        let gross_amount = 0;
+        
+        const itemDetailElement = document.getElementById('item_detail');
+        const items = Array.from(itemDetailElement.children);
+        const item_details = items.map((item, index) => {
+            const id = item.children[0].children[1].value;
+            const name = item.children[1].children[1].value;
+            const quantity = Number(item.children[2].children[1].value);
+            const price_per_item = Number(item.children[3].children[1].value);
+            gross_amount += (quantity * price_per_item);
+            return { id, name, quantity, price: price_per_item };
+        });
+        
+        const transaction_details = {
+            order_id: `transaction-${new Date().getTime()}`,
+            gross_amount
+        };
+        const customer_details = {
+            email: document.getElementById('email').value,
+            first_name: document.getElementById('first_name').value,
+            last_name: document.getElementById('last_name').value,
+            phone: document.getElementById('phone').value
+        };
+        
+        
+        fetch('http://localhost:7000/payment/token' , {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json", 
+                "Accept": "application/json"
+            },
+            body: JSON.stringify({
+                item_details, transaction_details, customer_details
+            })
+        }).then(result => result.json())
+        .then(result => {
+            console.log(result)
+            snap.pay(result.token);
+        })
+        .catch(err => console.error(err))
+      }
+
+      function addItem(){
+        itemLength+=1;
+        const component = `
+                    <div>
+                        <label for="">Item id:</label>
+                        <input type="text" name="id" />    
+                    </div>
+                    <div>
+                        <label for="">Nama item</label>
+                        <input type="text" name="name"/>
+                    </div>
+                    <div>
+                        <label for="">Quantity</label>
+                        <input type="number" min="0" onchange="calculateTotal()"/>
+                    </div>
+
+                    <div>
+                        <label for="">price</label>
+                        <input type="text" name="price" onchange="calculateTotal()"/>
+                    </div>
+                `;
+        const itemDetailElement = document.getElementById('item_detail');
+        const div = document.createElement('div');
+        div.id = `item${itemLength+1}`;
+        div.className = 'item';
+        div.innerHTML = component;
+        itemDetailElement.appendChild(div);
+      }
+
+      function calculateTotal(){
+        const TotalElement = document.getElementById('total');
+        const itemDetailElement = document.getElementById('item_detail');
+        const items = Array.from(itemDetailElement.children);
+        const itemLength = items.length;
+        const totalPrice = items.map((item, index) => {
+            const id = item.children[0].children[1].value;
+            const name = item.children[1].children[1].value;
+            const quantity = Number(item.children[2].children[1].value);
+            const price_per_item = Number(item.children[3].children[1].value);
+            
+            return quantity * price_per_item;
+        }).reduce((a,b) => a + b);
+
+        TotalElement.innerHTML = totalPrice;
+      }
+  </script>
+</html>
